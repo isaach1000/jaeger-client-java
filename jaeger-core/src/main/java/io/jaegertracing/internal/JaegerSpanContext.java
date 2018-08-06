@@ -37,7 +37,7 @@ public class JaegerSpanContext implements SpanContext {
     this(traceId, spanId, parentId, flags, Collections.<String, String>emptyMap(), null);
   }
 
-  JaegerSpanContext(
+  protected JaegerSpanContext(
       long traceId,
       long spanId,
       long parentId,

@@ -75,7 +75,7 @@ public class JaegerTracer implements Tracer, Closeable {
   private final BaggageSetter baggageSetter;
   private final boolean expandExceptionLogs;
 
-  private JaegerTracer(
+  protected JaegerTracer(
       String serviceName,
       Reporter reporter,
       Sampler sampler,

@@ -46,7 +46,7 @@ public class JaegerSpan implements Span {
   private List<LogData> logs;
   private boolean finished = false; // to prevent the same span from getting reported multiple times
 
-  JaegerSpan(
+  protected JaegerSpan(
       JaegerTracer tracer,
       String operationName,
       JaegerSpanContext context,
