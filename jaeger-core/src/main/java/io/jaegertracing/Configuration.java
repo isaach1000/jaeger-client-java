@@ -181,7 +181,6 @@ public class Configuration {
     this.serviceName = JaegerTracer.Builder.checkValidServiceName(serviceName);
   }
 
-
   /**
    * @return Configuration object from environmental variables
    */
@@ -657,19 +656,19 @@ public class Configuration {
     }
   }
 
-  private static String stringOrDefault(String value, String defaultValue) {
+  protected static String stringOrDefault(String value, String defaultValue) {
     return value != null && value.length() > 0 ? value : defaultValue;
   }
 
-  private static Number numberOrDefault(Number value, Number defaultValue) {
+  protected static Number numberOrDefault(Number value, Number defaultValue) {
     return value != null ? value : defaultValue;
   }
 
-  private static String getProperty(String name) {
+  protected static String getProperty(String name) {
     return System.getProperty(name, System.getenv(name));
   }
 
-  private static Integer getPropertyAsInt(String name) {
+  protected static Integer getPropertyAsInt(String name) {
     String value = getProperty(name);
     if (value != null) {
       try {
@@ -681,7 +680,7 @@ public class Configuration {
     return null;
   }
 
-  private static Number getPropertyAsNum(String name) {
+  protected static Number getPropertyAsNum(String name) {
     String value = getProperty(name);
     if (value != null) {
       try {
@@ -698,11 +697,11 @@ public class Configuration {
    * the name. This method defaults to returning false for a name that doesn't exist.
    * @param name The name of the system property
    */
-  private static boolean getPropertyAsBool(String name) {
+  protected static boolean getPropertyAsBool(String name) {
     return Boolean.valueOf(getProperty(name));
   }
 
-  private static Map<String, String> tracerTagsFromEnv() {
+  protected static Map<String, String> tracerTagsFromEnv() {
     Map<String, String> tracerTagMaps = null;
     String tracerTags = getProperty(JAEGER_TAGS);
     if (tracerTags != null) {
@@ -722,7 +721,7 @@ public class Configuration {
     return tracerTagMaps;
   }
 
-  private static String resolveValue(String value) {
+  protected static String resolveValue(String value) {
     if (value.startsWith("${") && value.endsWith("}")) {
       String[] ref = value.substring(2, value.length() - 1).split("\\s*:\\s*");
       if (ref.length > 0) {
