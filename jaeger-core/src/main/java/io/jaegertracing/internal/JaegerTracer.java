@@ -72,6 +72,7 @@ public class JaegerTracer implements Tracer, Closeable {
   private final Map<String, ?> tags;
   private final boolean zipkinSharedRpcSpan;
   private final ScopeManager scopeManager;
+  private final BaggageRestrictionManager baggageRestrictionManager;
   private final BaggageSetter baggageSetter;
   private final boolean expandExceptionLogs;
 
@@ -95,6 +96,7 @@ public class JaegerTracer implements Tracer, Closeable {
     this.metrics = metrics;
     this.zipkinSharedRpcSpan = zipkinSharedRpcSpan;
     this.scopeManager = scopeManager;
+    this.baggageRestrictionManager = baggageRestrictionManager;
     this.baggageSetter = new BaggageSetter(baggageRestrictionManager, metrics);
     this.expandExceptionLogs = expandExceptionLogs;
 
@@ -156,6 +158,14 @@ public class JaegerTracer implements Tracer, Closeable {
   Reporter getReporter() {
     return reporter;
   }
+
+  protected Sampler getSampler() { return sampler; }
+
+  protected PropagationRegistry getRegistry() { return registry; }
+
+  protected boolean isZipkinSharedRpcSpan() { return zipkinSharedRpcSpan; }
+
+  protected BaggageRestrictionManager getBaggageRestrictionManager() { return baggageRestrictionManager; }
 
   void reportSpan(JaegerSpan span) {
     reporter.report(span);
@@ -226,7 +236,7 @@ public class JaegerTracer implements Tracer, Closeable {
     private final Map<String, Object> tags = new HashMap<String, Object>();
     private boolean ignoreActiveSpan = false;
 
-    SpanBuilder(String operationName) {
+    protected SpanBuilder(String operationName) {
       this.operationName = operationName;
     }
 

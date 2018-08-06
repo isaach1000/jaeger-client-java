@@ -73,6 +73,10 @@ public class JaegerSpan implements Span {
     return startTimeMicroseconds;
   }
 
+  protected long getStartTimeNanoTicks() { return startTimeNanoTicks; }
+
+  protected boolean getComputeDurationViaNanoTicks() { return computeDurationViaNanoTicks; }
+
   public long getDuration() {
     synchronized (this) {
       return durationMicroseconds;
