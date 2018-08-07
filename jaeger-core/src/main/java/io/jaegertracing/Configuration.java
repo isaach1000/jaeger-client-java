@@ -15,6 +15,7 @@
 package io.jaegertracing;
 
 import io.jaegertracing.internal.JaegerTracer;
+import io.jaegertracing.internal.TracingFactory;
 import io.jaegertracing.internal.metrics.Metrics;
 import io.jaegertracing.internal.metrics.NoopMetricsFactory;
 import io.jaegertracing.internal.propagation.B3TextMapCodec;
@@ -201,6 +202,10 @@ public class Configuration {
       .withCodec(CodecConfiguration.fromEnv());
   }
 
+  protected TracingFactory tracingFactory() {
+    return new TracingFactory();
+  }
+
   public JaegerTracer.Builder getTracerBuilder() {
     if (reporterConfig == null) {
       reporterConfig = new ReporterConfiguration();
@@ -217,17 +222,13 @@ public class Configuration {
     Metrics metrics = new Metrics(metricsFactory);
     Reporter reporter = reporterConfig.getReporter(metrics);
     Sampler sampler = samplerConfig.createSampler(serviceName, metrics);
-    JaegerTracer.Builder builder = createTracerBuilder(serviceName)
+    JaegerTracer.Builder builder = tracingFactory().createTracerBuilder(serviceName)
         .withSampler(sampler)
         .withReporter(reporter)
         .withMetrics(metrics)
         .withTags(tracerTags);
     codecConfig.apply(builder);
     return builder;
-  }
-
-  protected JaegerTracer.Builder createTracerBuilder(String serviceName) {
-    return new JaegerTracer.Builder(serviceName);
   }
 
   public synchronized JaegerTracer getTracer() {

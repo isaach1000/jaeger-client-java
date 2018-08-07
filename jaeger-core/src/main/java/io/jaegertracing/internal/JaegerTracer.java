@@ -41,6 +41,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMap;
 import io.opentracing.tag.Tags;
 import io.opentracing.util.ThreadLocalScopeManager;
 import java.io.Closeable;
@@ -161,12 +162,6 @@ public class JaegerTracer implements Tracer, Closeable {
 
   protected Sampler getSampler() { return sampler; }
 
-  protected PropagationRegistry getRegistry() { return registry; }
-
-  protected boolean isZipkinSharedRpcSpan() { return zipkinSharedRpcSpan; }
-
-  protected BaggageRestrictionManager getBaggageRestrictionManager() { return baggageRestrictionManager; }
-
   void reportSpan(JaegerSpan span) {
     reporter.report(span);
     metrics.spansFinished.inc(1);
@@ -194,11 +189,7 @@ public class JaegerTracer implements Tracer, Closeable {
 
   @Override
   public JaegerTracer.SpanBuilder buildSpan(String operationName) {
-    return createSpanBuilder(operationName);
-  }
-
-  protected JaegerTracer.SpanBuilder createSpanBuilder(String operationName) {
-    return new SpanBuilder(operationName);
+    return tracingFactory().createSpanBuilder(this, operationName);
   }
 
   @Override
@@ -226,6 +217,10 @@ public class JaegerTracer implements Tracer, Closeable {
   public void close() {
     reporter.close();
     sampler.close();
+  }
+
+  protected TracingFactory tracingFactory() {
+    return new TracingFactory();
   }
 
   public class SpanBuilder implements Tracer.SpanBuilder {
@@ -329,7 +324,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      return new JaegerSpanContext(id, id, 0, flags);
+      return JaegerTracer.this.tracingFactory().createSpanContext(id, id, 0, flags, Collections.<String, String>emptyMap(), debugId);
     }
 
     private Map<String, String> createChildBaggage() {
@@ -368,7 +363,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      return new JaegerSpanContext(
+      return JaegerTracer.this.tracingFactory().createSpanContext(
           preferredReference.getTraceId(),
           Utils.uniqueId(),
           preferredReference.getSpanId(),
@@ -443,7 +438,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      JaegerSpan jaegerSpan = new JaegerSpan(
+      JaegerSpan jaegerSpan = JaegerTracer.this.tracingFactory().createSpan(
               JaegerTracer.this,
               operationName,
               context,
@@ -493,16 +488,23 @@ public class JaegerTracer implements Tracer, Closeable {
     private ScopeManager scopeManager = new ThreadLocalScopeManager();
     private BaggageRestrictionManager baggageRestrictionManager = new DefaultBaggageRestrictionManager();
     private boolean expandExceptionLogs;
+    private TracingFactory tracingFactory;
 
-    public Builder(String serviceName) {
+    public Builder(String serviceName, TracingFactory tracingFactory) {
       this.serviceName = checkValidServiceName(serviceName);
-      TextMapCodec textMapCodec = new TextMapCodec(false);
+      this.tracingFactory = tracingFactory;
+
+      TextMapCodec textMapCodec = TextMapCodec.builder().withUrlEncoding(false).withTracingFactory(tracingFactory).build();
       this.registerInjector(Format.Builtin.TEXT_MAP, textMapCodec);
       this.registerExtractor(Format.Builtin.TEXT_MAP, textMapCodec);
-      TextMapCodec httpCodec = new TextMapCodec(true);
+      TextMapCodec httpCodec = TextMapCodec.builder().withUrlEncoding(true).withTracingFactory(tracingFactory).build();
       this.registerInjector(Format.Builtin.HTTP_HEADERS, httpCodec);
       this.registerExtractor(Format.Builtin.HTTP_HEADERS, httpCodec);
       // TODO binary codec not implemented
+    }
+
+    public Builder(String serviceName) {
+      this(serviceName, new TracingFactory());
     }
 
     /**
@@ -604,22 +606,7 @@ public class JaegerTracer implements Tracer, Closeable {
             .withMetrics(metrics)
             .build();
       }
-      return createTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
-          zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs);
-    }
-
-    protected JaegerTracer createTracer(String serviceName,
-      Reporter reporter,
-      Sampler sampler,
-      PropagationRegistry registry,
-      Clock clock,
-      Metrics metrics,
-      Map<String, Object> tags,
-      boolean zipkinSharedRpcSpan,
-      ScopeManager scopeManager,
-      BaggageRestrictionManager baggageRestrictionManager,
-      boolean expandExceptionLogs) {
-      return new JaegerTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
+      return tracingFactory.createTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
           zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs);
     }
 

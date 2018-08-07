@@ -21,65 +21,42 @@ public class JaegerSubclassTest {
       super(serviceName);
     }
 
-    public static Configuration fromEnv() {
-      CustomConfiguration config = new CustomConfiguration(getProperty(JAEGER_SERVICE_NAME));
-      config.initFromEnv();
-      return config;
+    @Override
+    public CustomTracer.CustomBuilder getTracerBuilder() {
+      return (CustomTracer.CustomBuilder) super.getTracerBuilder();
     }
 
     @Override
-    public CustomTracer.Builder getTracerBuilder() {
-      return (CustomTracer.Builder) super.getTracerBuilder();
-    }
-
-    @Override
-    public CustomTracer getTracer() {
+    public synchronized CustomTracer getTracer() {
       return (CustomTracer) super.getTracer();
     }
 
     @Override
-    protected CustomTracer.Builder createTracerBuilder(String serviceName) {
-      return new CustomTracer.Builder(serviceName);
+    protected TracingFactory tracingFactory() {
+      return new CustomTracingFactory();
     }
   }
 
   private static class CustomTracer extends JaegerTracer {
-    public static class Builder extends JaegerTracer.Builder {
-      public Builder(String serviceName) {
-        super(serviceName);
+    public static class CustomBuilder extends JaegerTracer.Builder {
+      public CustomBuilder(String serviceName, TracingFactory tracingFactory) {
+        super(serviceName, tracingFactory);
       }
 
       @Override
-      protected CustomTracer createTracer(
-        String serviceName,
-        Reporter reporter,
-        Sampler sampler,
-        PropagationRegistry registry,
-        Clock clock,
-        Metrics metrics,
-        Map<String, Object> tags,
-        boolean zipkinSharedRpcSpan,
-        ScopeManager scopeManager,
-        BaggageRestrictionManager baggageRestrictionManager,
-        boolean expandExceptionLogs) {
-          return new CustomTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
-          zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs);
-        }
+      public CustomTracer build() {
+        return (CustomTracer) super.build();
+      }
     }
 
-    public class SpanBuilder extends JaegerTracer.SpanBuilder {
-      protected SpanBuilder(String operationName) {
+    public class CustomSpanBuilder extends JaegerTracer.SpanBuilder {
+      protected CustomSpanBuilder(String operationName) {
         super(operationName);
       }
 
       @Override
       public CustomSpan start() {
-        return new CustomSpan(super.start());
-      }
-
-      @Override
-      public Scope startActive(boolean finishSpanOnClose) {
-        return scopeManager().activate(start(), finishSpanOnClose);
+        return (CustomSpan) super.start();
       }
     }
 
@@ -110,26 +87,12 @@ public class JaegerSubclassTest {
     }
 
     @Override
-    public SpanBuilder buildSpan(String operationName) {
-      return new SpanBuilder(operationName);
+    protected CustomTracingFactory tracingFactory() {
+      return new CustomTracingFactory();
     }
   }
 
   private static class CustomSpan extends JaegerSpan {
-    private final CustomSpanContext ctx;
-
-    CustomSpan(JaegerSpan span) {
-      this(
-          span.getTracer(),
-          span.getOperationName(),
-          new CustomSpanContext(span.context()),
-          span.getStart(),
-          span.getStartTimeNanoTicks(),
-          span.getComputeDurationViaNanoTicks(),
-          span.getTags(),
-          span.getReferences());
-    }
-
     public CustomSpan(
         JaegerTracer tracer,
         String operationName,
@@ -148,26 +111,15 @@ public class JaegerSubclassTest {
           computeDurationViaNanoTicks,
           tags,
           references);
-      ctx = new CustomSpanContext(context);
     }
 
     @Override
     public CustomSpanContext context() {
-      return ctx;
+      return (CustomSpanContext) super.context();
     }
   }
 
   private static class CustomSpanContext extends JaegerSpanContext {
-    CustomSpanContext(JaegerSpanContext ctx) {
-      this(
-          ctx.getTraceId(),
-          ctx.getSpanId(),
-          ctx.getParentId(),
-          ctx.getFlags(),
-          ctx.baggage(),
-          ctx.getDebugId());
-    }
-
     public CustomSpanContext(
         long traceId,
         long spanId,
@@ -177,14 +129,91 @@ public class JaegerSubclassTest {
         String debugId) {
       super(traceId, spanId, parentId, flags, baggage, debugId);
     }
+
+    @Override
+    protected CustomTracingFactory tracingFactory() {
+      return new CustomTracingFactory();
+    }
+  }
+
+  private static class CustomTracingFactory extends TracingFactory {
+    @Override
+    public CustomTracer createTracer(
+        String serviceName,
+        Reporter reporter,
+        Sampler sampler,
+        PropagationRegistry registry,
+        Clock clock,
+        Metrics metrics,
+        Map<String, Object> tags,
+        boolean zipkinSharedRpcSpan,
+        ScopeManager scopeManager,
+        BaggageRestrictionManager baggageRestrictionManager,
+        boolean expandExceptionLogs) {
+      return new CustomTracer(
+          serviceName,
+          reporter,
+          sampler,
+          registry,
+          clock,
+          metrics,
+          tags,
+          zipkinSharedRpcSpan,
+          scopeManager,
+          baggageRestrictionManager,
+          expandExceptionLogs);
+    }
+
+    @Override
+    public CustomSpan createSpan(
+        JaegerTracer tracer,
+        String operationName,
+        JaegerSpanContext context,
+        long startTimeMicroseconds,
+        long startTimeNanoTicks,
+        boolean computeDurationViaNanoTicks,
+        Map<String, Object> tags,
+        List<Reference> references) {
+      return new CustomSpan(
+          tracer,
+          operationName,
+          context,
+          startTimeMicroseconds,
+          startTimeNanoTicks,
+          computeDurationViaNanoTicks,
+          tags,
+          references);
+    }
+
+    @Override
+    public CustomSpanContext createSpanContext(long traceId,
+                                               long spanId,
+                                               long parentId,
+                                               byte flags,
+                                               Map<String, String> baggage,
+                                               String debugId) {
+      return new CustomSpanContext(traceId, spanId, parentId, flags, baggage, debugId);
+    }
+
+    @Override
+    public CustomTracer.CustomSpanBuilder createSpanBuilder(JaegerTracer tracer, String operationName) {
+      return ((CustomTracer)tracer).new CustomSpanBuilder(operationName);
+    }
+
+    @Override
+    public CustomTracer.CustomBuilder createTracerBuilder(String serviceName) {
+      return new CustomTracer.CustomBuilder(serviceName, this);
+    }
   }
 
   @Test
   public void testTracer() {
     final CustomConfiguration config = new CustomConfiguration("test-service");
-    final CustomTracer tracer = config.getTracer();
+    final CustomTracer.CustomBuilder builder = config.getTracerBuilder();
+    final CustomTracer tracer = builder.build();
     final Scope scope = tracer.buildSpan("test-operation").startActive(true);
     Assert.assertNotNull(tracer.scopeManager().active());
+    Assert.assertTrue(tracer instanceof CustomTracer);
     scope.close();
     config.closeTracer();
   }

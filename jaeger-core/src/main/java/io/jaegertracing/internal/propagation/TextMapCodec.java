@@ -16,11 +16,13 @@ package io.jaegertracing.internal.propagation;
 
 import io.jaegertracing.internal.Constants;
 import io.jaegertracing.internal.JaegerSpanContext;
+import io.jaegertracing.internal.TracingFactory;
 import io.jaegertracing.spi.Codec;
 import io.opentracing.propagation.TextMap;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -44,6 +46,8 @@ public class TextMapCodec implements Codec<TextMap> {
 
   private final boolean urlEncoding;
 
+  private final TracingFactory tracingFactory;
+
   public TextMapCodec(boolean urlEncoding) {
     this(builder().withUrlEncoding(urlEncoding));
   }
@@ -52,6 +56,7 @@ public class TextMapCodec implements Codec<TextMap> {
     this.urlEncoding = builder.urlEncoding;
     this.contextKey = builder.spanContextKey;
     this.baggagePrefix = builder.baggagePrefix;
+    this.tracingFactory = builder.tracingFactory;
   }
 
   @Override
@@ -71,7 +76,7 @@ public class TextMapCodec implements Codec<TextMap> {
       // TODO there should be no lower-case here
       String key = entry.getKey().toLowerCase(Locale.ROOT);
       if (key.equals(contextKey)) {
-        context = JaegerSpanContext.contextFromString(decodedValue(entry.getValue()));
+        context = JaegerSpanContext.contextFromString(decodedValue(entry.getValue()), tracingFactory);
       } else if (key.equals(Constants.DEBUG_ID_HEADER_KEY)) {
         debugId = decodedValue(entry.getValue());
       } else if (key.startsWith(baggagePrefix)) {
@@ -83,7 +88,7 @@ public class TextMapCodec implements Codec<TextMap> {
     }
     if (context == null) {
       if (debugId != null) {
-        return JaegerSpanContext.withDebugId(debugId);
+        return tracingFactory.createSpanContext(0, 0, 0, (byte) 0, Collections.<String, String>emptyMap(), debugId);
       }
       return null;
     }
@@ -148,6 +153,7 @@ public class TextMapCodec implements Codec<TextMap> {
     private boolean urlEncoding;
     private String spanContextKey = SPAN_CONTEXT_KEY;
     private String baggagePrefix = BAGGAGE_KEY_PREFIX;
+    private TracingFactory tracingFactory = new TracingFactory();
 
     public Builder withUrlEncoding(boolean urlEncoding) {
       this.urlEncoding = urlEncoding;
@@ -161,6 +167,11 @@ public class TextMapCodec implements Codec<TextMap> {
 
     public Builder withBaggagePrefix(String baggagePrefix) {
       this.baggagePrefix = baggagePrefix;
+      return this;
+    }
+
+    public Builder withTracingFactory(TracingFactory tracingFactory) {
+      this.tracingFactory = tracingFactory;
       return this;
     }
 
