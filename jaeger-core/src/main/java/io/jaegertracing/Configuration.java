@@ -189,11 +189,16 @@ public class Configuration {
   }
 
   public static Configuration fromEnv(String serviceName) {
-    return new Configuration(serviceName)
-            .withTracerTags(tracerTagsFromEnv())
-            .withReporter(ReporterConfiguration.fromEnv())
-            .withSampler(SamplerConfiguration.fromEnv())
-            .withCodec(CodecConfiguration.fromEnv());
+    Configuration config = new Configuration(serviceName);
+    config.initFromEnv();
+    return config;
+  }
+
+  protected void initFromEnv() {
+    withTracerTags(tracerTagsFromEnv())
+      .withReporter(ReporterConfiguration.fromEnv())
+      .withSampler(SamplerConfiguration.fromEnv())
+      .withCodec(CodecConfiguration.fromEnv());
   }
 
   public JaegerTracer.Builder getTracerBuilder() {
@@ -212,13 +217,17 @@ public class Configuration {
     Metrics metrics = new Metrics(metricsFactory);
     Reporter reporter = reporterConfig.getReporter(metrics);
     Sampler sampler = samplerConfig.createSampler(serviceName, metrics);
-    JaegerTracer.Builder builder = new JaegerTracer.Builder(serviceName)
+    JaegerTracer.Builder builder = createTracerBuilder(serviceName)
         .withSampler(sampler)
         .withReporter(reporter)
         .withMetrics(metrics)
         .withTags(tracerTags);
     codecConfig.apply(builder);
     return builder;
+  }
+
+  protected JaegerTracer.Builder createTracerBuilder(String serviceName) {
+    return new JaegerTracer.Builder(serviceName);
   }
 
   public synchronized JaegerTracer getTracer() {

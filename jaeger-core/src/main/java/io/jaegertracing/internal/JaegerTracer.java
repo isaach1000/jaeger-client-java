@@ -194,6 +194,10 @@ public class JaegerTracer implements Tracer, Closeable {
 
   @Override
   public JaegerTracer.SpanBuilder buildSpan(String operationName) {
+    return createSpanBuilder(operationName);
+  }
+
+  protected JaegerTracer.SpanBuilder createSpanBuilder(String operationName) {
     return new SpanBuilder(operationName);
   }
 
@@ -477,7 +481,7 @@ public class JaegerTracer implements Tracer, Closeable {
   /**
    * Builds a {@link JaegerTracer} with options.
    */
-  public static final class Builder {
+  public static class Builder {
     private Sampler sampler;
     private Reporter reporter;
     private final PropagationRegistry registry = new PropagationRegistry();
@@ -600,6 +604,21 @@ public class JaegerTracer implements Tracer, Closeable {
             .withMetrics(metrics)
             .build();
       }
+      return createTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
+          zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs);
+    }
+
+    protected JaegerTracer createTracer(String serviceName,
+      Reporter reporter,
+      Sampler sampler,
+      PropagationRegistry registry,
+      Clock clock,
+      Metrics metrics,
+      Map<String, Object> tags,
+      boolean zipkinSharedRpcSpan,
+      ScopeManager scopeManager,
+      BaggageRestrictionManager baggageRestrictionManager,
+      boolean expandExceptionLogs) {
       return new JaegerTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
           zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs);
     }
