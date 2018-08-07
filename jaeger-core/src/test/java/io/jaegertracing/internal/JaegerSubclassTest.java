@@ -21,6 +21,12 @@ public class JaegerSubclassTest {
       super(serviceName);
     }
 
+    public static CustomConfiguration fromEnv(String serviceName) {
+      CustomConfiguration config = new CustomConfiguration(serviceName);
+      config.initFromEnv();
+      return config;
+    }
+
     @Override
     public CustomTracer.CustomBuilder getTracerBuilder() {
       return (CustomTracer.CustomBuilder) super.getTracerBuilder();
@@ -208,12 +214,13 @@ public class JaegerSubclassTest {
 
   @Test
   public void testTracer() {
-    final CustomConfiguration config = new CustomConfiguration("test-service");
+    final CustomConfiguration config = CustomConfiguration.fromEnv("test-service");
     final CustomTracer.CustomBuilder builder = config.getTracerBuilder();
     final CustomTracer tracer = builder.build();
     final Scope scope = tracer.buildSpan("test-operation").startActive(true);
     Assert.assertNotNull(tracer.scopeManager().active());
-    Assert.assertTrue(tracer instanceof CustomTracer);
+    Assert.assertTrue(tracer.scopeManager().active().span() instanceof CustomSpan);
+    Assert.assertTrue(tracer.scopeManager().active().span().context() instanceof CustomSpanContext);
     scope.close();
     config.closeTracer();
   }
