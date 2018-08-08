@@ -32,6 +32,7 @@ public class JaegerSpanContext implements SpanContext {
   private final byte flags;
   private final Map<String, String> baggage;
   private final String debugId;
+  private final TracingFactory tracingFactory;
 
   public JaegerSpanContext(long traceId, long spanId, long parentId, byte flags) {
     this(traceId, spanId, parentId, flags, Collections.<String, String>emptyMap(), null);
@@ -44,6 +45,17 @@ public class JaegerSpanContext implements SpanContext {
       byte flags,
       Map<String, String> baggage,
       String debugId) {
+    this(traceId, spanId, parentId, flags, baggage, debugId, new TracingFactory());
+  }
+
+  protected JaegerSpanContext(
+      long traceId,
+      long spanId,
+      long parentId,
+      byte flags,
+      Map<String, String> baggage,
+      String debugId,
+      TracingFactory tracingFactory) {
     if (baggage == null) {
       throw new NullPointerException();
     }
@@ -53,6 +65,7 @@ public class JaegerSpanContext implements SpanContext {
     this.flags = flags;
     this.baggage = baggage;
     this.debugId = debugId;
+    this.tracingFactory = tracingFactory;
   }
 
   @Override
@@ -135,10 +148,6 @@ public class JaegerSpanContext implements SpanContext {
         null);
   }
 
-  protected TracingFactory tracingFactory() {
-    return new TracingFactory();
-  }
-
   public JaegerSpanContext withBaggageItem(String key, String val) {
     Map<String, String> newBaggage = new HashMap<String, String>(this.baggage);
     if (val == null) {
@@ -146,15 +155,15 @@ public class JaegerSpanContext implements SpanContext {
     } else {
       newBaggage.put(key, val);
     }
-    return tracingFactory().createSpanContext(traceId, spanId, parentId, flags, newBaggage, debugId);
+    return tracingFactory.createSpanContext(traceId, spanId, parentId, flags, newBaggage, debugId);
   }
 
   public JaegerSpanContext withBaggage(Map<String, String> newBaggage) {
-    return tracingFactory().createSpanContext(traceId, spanId, parentId, flags, newBaggage, debugId);
+    return tracingFactory.createSpanContext(traceId, spanId, parentId, flags, newBaggage, debugId);
   }
 
   public JaegerSpanContext withFlags(byte flags) {
-    return tracingFactory().createSpanContext(traceId, spanId, parentId, flags, baggage, debugId);
+    return tracingFactory.createSpanContext(traceId, spanId, parentId, flags, baggage, debugId);
   }
 
   /**

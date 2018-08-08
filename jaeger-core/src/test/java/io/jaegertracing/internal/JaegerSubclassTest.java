@@ -11,14 +11,15 @@ import io.opentracing.ScopeManager;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class JaegerSubclassTest {
   private static class CustomConfiguration extends Configuration {
-    public CustomConfiguration(String serviceName) {
-      super(serviceName, new CustomTracingFactory());
+    public CustomConfiguration(String serviceName, TracingFactory tracingFactory) {
+      super(serviceName, tracingFactory);
     }
 
     @Override
@@ -66,7 +67,8 @@ public class JaegerSubclassTest {
         boolean zipkinSharedRpcSpan,
         ScopeManager scopeManager,
         BaggageRestrictionManager baggageRestrictionManager,
-        boolean expandExceptionLogs) {
+        boolean expandExceptionLogs,
+        TracingFactory tracingFactory) {
       super(
           serviceName,
           reporter,
@@ -78,12 +80,8 @@ public class JaegerSubclassTest {
           zipkinSharedRpcSpan,
           scopeManager,
           baggageRestrictionManager,
-          expandExceptionLogs);
-    }
-
-    @Override
-    protected CustomTracingFactory tracingFactory() {
-      return new CustomTracingFactory();
+          expandExceptionLogs,
+          tracingFactory);
     }
   }
 
@@ -121,13 +119,9 @@ public class JaegerSubclassTest {
         long parentId,
         byte flags,
         Map<String, String> baggage,
-        String debugId) {
-      super(traceId, spanId, parentId, flags, baggage, debugId);
-    }
-
-    @Override
-    protected CustomTracingFactory tracingFactory() {
-      return new CustomTracingFactory();
+        String debugId,
+        TracingFactory tracingFactory) {
+      super(traceId, spanId, parentId, flags, baggage, debugId, tracingFactory);
     }
   }
 
@@ -156,7 +150,8 @@ public class JaegerSubclassTest {
           zipkinSharedRpcSpan,
           scopeManager,
           baggageRestrictionManager,
-          expandExceptionLogs);
+          expandExceptionLogs,
+          this);
     }
 
     @Override
@@ -187,7 +182,7 @@ public class JaegerSubclassTest {
                                                byte flags,
                                                Map<String, String> baggage,
                                                String debugId) {
-      return new CustomSpanContext(traceId, spanId, parentId, flags, baggage, debugId);
+      return new CustomSpanContext(traceId, spanId, parentId, flags, baggage, debugId, this);
     }
 
     @Override
@@ -203,9 +198,10 @@ public class JaegerSubclassTest {
 
   @Test
   public void testTracer() {
-    final CustomConfiguration config = new CustomConfiguration("test-service");
+    final CustomTracingFactory tracingFactory = new CustomTracingFactory();
+    final CustomConfiguration config = new CustomConfiguration("test-service", tracingFactory);
     final CustomTracer.CustomBuilder builder = config.getTracerBuilder();
-    final CustomTracer tracer = config.getTracer();
+    final CustomTracer tracer = builder.build();
     final Scope scope = tracer.buildSpan("test-operation").startActive(true);
     Assert.assertNotNull(tracer.scopeManager().active());
     Assert.assertTrue(tracer.scopeManager().active().span() instanceof CustomSpan);

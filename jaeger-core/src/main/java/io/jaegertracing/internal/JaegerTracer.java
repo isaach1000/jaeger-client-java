@@ -76,6 +76,7 @@ public class JaegerTracer implements Tracer, Closeable {
   private final BaggageRestrictionManager baggageRestrictionManager;
   private final BaggageSetter baggageSetter;
   private final boolean expandExceptionLogs;
+  private final TracingFactory tracingFactory;
 
   protected JaegerTracer(
       String serviceName,
@@ -89,6 +90,34 @@ public class JaegerTracer implements Tracer, Closeable {
       ScopeManager scopeManager,
       BaggageRestrictionManager baggageRestrictionManager,
       boolean expandExceptionLogs) {
+    this(
+        serviceName,
+        reporter,
+        sampler,
+        registry,
+        clock,
+        metrics,
+        tags,
+        zipkinSharedRpcSpan,
+        scopeManager,
+        baggageRestrictionManager,
+        expandExceptionLogs,
+        new TracingFactory());
+  }
+
+  protected JaegerTracer(
+      String serviceName,
+      Reporter reporter,
+      Sampler sampler,
+      PropagationRegistry registry,
+      Clock clock,
+      Metrics metrics,
+      Map<String, Object> tags,
+      boolean zipkinSharedRpcSpan,
+      ScopeManager scopeManager,
+      BaggageRestrictionManager baggageRestrictionManager,
+      boolean expandExceptionLogs,
+      TracingFactory tracingFactory) {
     this.serviceName = serviceName;
     this.reporter = reporter;
     this.sampler = sampler;
@@ -100,6 +129,7 @@ public class JaegerTracer implements Tracer, Closeable {
     this.baggageRestrictionManager = baggageRestrictionManager;
     this.baggageSetter = new BaggageSetter(baggageRestrictionManager, metrics);
     this.expandExceptionLogs = expandExceptionLogs;
+    this.tracingFactory = tracingFactory;
 
     this.version = loadVersion();
 
@@ -189,7 +219,7 @@ public class JaegerTracer implements Tracer, Closeable {
 
   @Override
   public JaegerTracer.SpanBuilder buildSpan(String operationName) {
-    return tracingFactory().createSpanBuilder(this, operationName);
+    return tracingFactory.createSpanBuilder(this, operationName);
   }
 
   @Override
@@ -217,10 +247,6 @@ public class JaegerTracer implements Tracer, Closeable {
   public void close() {
     reporter.close();
     sampler.close();
-  }
-
-  protected TracingFactory tracingFactory() {
-    return new TracingFactory();
   }
 
   public class SpanBuilder implements Tracer.SpanBuilder {
@@ -324,7 +350,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      return JaegerTracer.this.tracingFactory().createSpanContext(id, id, 0, flags, Collections.<String, String>emptyMap(), debugId);
+      return JaegerTracer.this.tracingFactory.createSpanContext(id, id, 0, flags, Collections.<String, String>emptyMap(), debugId);
     }
 
     private Map<String, String> createChildBaggage() {
@@ -363,7 +389,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      return JaegerTracer.this.tracingFactory().createSpanContext(
+      return JaegerTracer.this.tracingFactory.createSpanContext(
           preferredReference.getTraceId(),
           Utils.uniqueId(),
           preferredReference.getSpanId(),
@@ -438,7 +464,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      JaegerSpan jaegerSpan = JaegerTracer.this.tracingFactory().createSpan(
+      JaegerSpan jaegerSpan = JaegerTracer.this.tracingFactory.createSpan(
               JaegerTracer.this,
               operationName,
               context,
