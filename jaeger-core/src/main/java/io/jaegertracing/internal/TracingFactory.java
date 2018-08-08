@@ -34,7 +34,8 @@ public class TracingFactory {
         zipkinSharedRpcSpan,
         scopeManager,
         baggageRestrictionManager,
-        expandExceptionLogs);
+        expandExceptionLogs,
+        this);
   }
 
   public JaegerSpan createSpan(
@@ -63,7 +64,7 @@ public class TracingFactory {
                                              byte flags,
                                              Map<String, String> baggage,
                                              String debugId) {
-    return new JaegerSpanContext(traceId, spanId, parentId, flags, baggage, debugId);
+    return new JaegerSpanContext(traceId, spanId, parentId, flags, baggage, debugId, this);
   }
 
   public JaegerTracer.SpanBuilder createSpanBuilder(JaegerTracer tracer, String operationName) {
@@ -71,6 +72,6 @@ public class TracingFactory {
   }
 
   public JaegerTracer.Builder createTracerBuilder(String serviceName) {
-    return new JaegerTracer.Builder(serviceName);
+    return new JaegerTracer.Builder(serviceName, this);
   }
 }

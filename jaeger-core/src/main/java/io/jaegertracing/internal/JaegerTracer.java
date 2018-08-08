@@ -89,33 +89,6 @@ public class JaegerTracer implements Tracer, Closeable {
       boolean zipkinSharedRpcSpan,
       ScopeManager scopeManager,
       BaggageRestrictionManager baggageRestrictionManager,
-      boolean expandExceptionLogs) {
-    this(
-        serviceName,
-        reporter,
-        sampler,
-        registry,
-        clock,
-        metrics,
-        tags,
-        zipkinSharedRpcSpan,
-        scopeManager,
-        baggageRestrictionManager,
-        expandExceptionLogs,
-        new TracingFactory());
-  }
-
-  protected JaegerTracer(
-      String serviceName,
-      Reporter reporter,
-      Sampler sampler,
-      PropagationRegistry registry,
-      Clock clock,
-      Metrics metrics,
-      Map<String, Object> tags,
-      boolean zipkinSharedRpcSpan,
-      ScopeManager scopeManager,
-      BaggageRestrictionManager baggageRestrictionManager,
       boolean expandExceptionLogs,
       TracingFactory tracingFactory) {
     this.serviceName = serviceName;
@@ -189,8 +162,6 @@ public class JaegerTracer implements Tracer, Closeable {
   Reporter getReporter() {
     return reporter;
   }
-
-  protected Sampler getSampler() { return sampler; }
 
   void reportSpan(JaegerSpan span) {
     reporter.report(span);
@@ -529,6 +500,7 @@ public class JaegerTracer implements Tracer, Closeable {
       // TODO binary codec not implemented
     }
 
+    @Deprecated
     public Builder(String serviceName) {
       this(serviceName, new TracingFactory());
     }

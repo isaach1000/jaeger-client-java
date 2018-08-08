@@ -35,17 +35,7 @@ public class JaegerSpanContext implements SpanContext {
   private final TracingFactory tracingFactory;
 
   public JaegerSpanContext(long traceId, long spanId, long parentId, byte flags) {
-    this(traceId, spanId, parentId, flags, Collections.<String, String>emptyMap(), null);
-  }
-
-  protected JaegerSpanContext(
-      long traceId,
-      long spanId,
-      long parentId,
-      byte flags,
-      Map<String, String> baggage,
-      String debugId) {
-    this(traceId, spanId, parentId, flags, baggage, debugId, new TracingFactory());
+    this(traceId, spanId, parentId, flags, Collections.<String, String>emptyMap(), null, new TracingFactory());
   }
 
   protected JaegerSpanContext(
