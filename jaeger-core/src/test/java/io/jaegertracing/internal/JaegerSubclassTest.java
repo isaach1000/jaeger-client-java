@@ -28,7 +28,7 @@ public class JaegerSubclassTest {
     }
 
     @Override
-    public CustomTracer getTracer() {
+    public synchronized CustomTracer getTracer() {
       return (CustomTracer) super.getTracer();
     }
   }
@@ -123,6 +123,21 @@ public class JaegerSubclassTest {
         TracingFactory tracingFactory) {
       super(traceId, spanId, parentId, flags, baggage, debugId, tracingFactory);
     }
+
+    @Override
+    public CustomSpanContext withFlags(byte flags) {
+      return (CustomSpanContext) super.withFlags(flags);
+    }
+
+    @Override
+    public CustomSpanContext withBaggage(Map<String, String> baggage) {
+      return (CustomSpanContext) super.withBaggage(baggage);
+    }
+
+    @Override
+    public CustomSpanContext withBaggageItem(String key, String value) {
+      return (CustomSpanContext) super.withBaggageItem(key, value);
+    }
   }
 
   private static class CustomTracingFactory extends TracingFactory {
@@ -206,6 +221,11 @@ public class JaegerSubclassTest {
     Assert.assertNotNull(tracer.scopeManager().active());
     Assert.assertTrue(tracer.scopeManager().active().span() instanceof CustomSpan);
     Assert.assertTrue(tracer.scopeManager().active().span().context() instanceof CustomSpanContext);
+    final CustomSpanContext ctx = (CustomSpanContext) tracer.scopeManager().active().span().context();
+    CustomSpanContext ctxCopy = ctx.withFlags((byte) 1);
+    ctxCopy = ctxCopy.withBaggage(Collections.emptyMap());
+    ctxCopy = ctxCopy.withBaggageItem("hello", "world");
+    Assert.assertNotSame(ctx, ctxCopy);
     scope.close();
     config.closeTracer();
   }
