@@ -18,13 +18,7 @@ import java.util.Map;
 public class JaegerSubclassTest {
   private static class CustomConfiguration extends Configuration {
     public CustomConfiguration(String serviceName) {
-      super(serviceName);
-    }
-
-    public static CustomConfiguration fromEnv(String serviceName) {
-      CustomConfiguration config = new CustomConfiguration(serviceName);
-      config.initFromEnv();
-      return config;
+      super(serviceName, new CustomTracingFactory());
     }
 
     @Override
@@ -33,13 +27,8 @@ public class JaegerSubclassTest {
     }
 
     @Override
-    public synchronized CustomTracer getTracer() {
+    public CustomTracer getTracer() {
       return (CustomTracer) super.getTracer();
-    }
-
-    @Override
-    protected TracingFactory tracingFactory() {
-      return new CustomTracingFactory();
     }
   }
 
@@ -214,9 +203,9 @@ public class JaegerSubclassTest {
 
   @Test
   public void testTracer() {
-    final CustomConfiguration config = CustomConfiguration.fromEnv("test-service");
+    final CustomConfiguration config = new CustomConfiguration("test-service");
     final CustomTracer.CustomBuilder builder = config.getTracerBuilder();
-    final CustomTracer tracer = builder.build();
+    final CustomTracer tracer = config.getTracer();
     final Scope scope = tracer.buildSpan("test-operation").startActive(true);
     Assert.assertNotNull(tracer.scopeManager().active());
     Assert.assertTrue(tracer.scopeManager().active().span() instanceof CustomSpan);

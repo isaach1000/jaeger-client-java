@@ -167,6 +167,7 @@ public class Configuration {
    * The serviceName that the tracer will use
    */
   private String serviceName;
+  private TracingFactory tracingFactory;
   private SamplerConfiguration samplerConfig;
   private ReporterConfiguration reporterConfig;
   private CodecConfiguration codecConfig;
@@ -178,8 +179,13 @@ public class Configuration {
    */
   private JaegerTracer tracer;
 
-  public Configuration(String serviceName) {
+  public Configuration(String serviceName, TracingFactory tracingFactory) {
     this.serviceName = JaegerTracer.Builder.checkValidServiceName(serviceName);
+    this.tracingFactory = tracingFactory;
+  }
+
+  public Configuration(String serviceName) {
+    this(serviceName, new TracingFactory());
   }
 
   /**
@@ -190,20 +196,11 @@ public class Configuration {
   }
 
   public static Configuration fromEnv(String serviceName) {
-    Configuration config = new Configuration(serviceName);
-    config.initFromEnv();
-    return config;
-  }
-
-  protected void initFromEnv() {
-    withTracerTags(tracerTagsFromEnv())
-      .withReporter(ReporterConfiguration.fromEnv())
-      .withSampler(SamplerConfiguration.fromEnv())
-      .withCodec(CodecConfiguration.fromEnv());
-  }
-
-  protected TracingFactory tracingFactory() {
-    return new TracingFactory();
+    return new Configuration(serviceName).
+        withTracerTags(tracerTagsFromEnv())
+        .withReporter(ReporterConfiguration.fromEnv())
+        .withSampler(SamplerConfiguration.fromEnv())
+        .withCodec(CodecConfiguration.fromEnv());
   }
 
   public JaegerTracer.Builder getTracerBuilder() {
@@ -222,7 +219,7 @@ public class Configuration {
     Metrics metrics = new Metrics(metricsFactory);
     Reporter reporter = reporterConfig.getReporter(metrics);
     Sampler sampler = samplerConfig.createSampler(serviceName, metrics);
-    JaegerTracer.Builder builder = tracingFactory().createTracerBuilder(serviceName)
+    JaegerTracer.Builder builder = tracingFactory.createTracerBuilder(serviceName)
         .withSampler(sampler)
         .withReporter(reporter)
         .withMetrics(metrics)
@@ -666,19 +663,19 @@ public class Configuration {
     }
   }
 
-  protected static String stringOrDefault(String value, String defaultValue) {
+  private static String stringOrDefault(String value, String defaultValue) {
     return value != null && value.length() > 0 ? value : defaultValue;
   }
 
-  protected static Number numberOrDefault(Number value, Number defaultValue) {
+  private static Number numberOrDefault(Number value, Number defaultValue) {
     return value != null ? value : defaultValue;
   }
 
-  protected static String getProperty(String name) {
+  private static String getProperty(String name) {
     return System.getProperty(name, System.getenv(name));
   }
 
-  protected static Integer getPropertyAsInt(String name) {
+  private static Integer getPropertyAsInt(String name) {
     String value = getProperty(name);
     if (value != null) {
       try {
@@ -690,7 +687,7 @@ public class Configuration {
     return null;
   }
 
-  protected static Number getPropertyAsNum(String name) {
+  private static Number getPropertyAsNum(String name) {
     String value = getProperty(name);
     if (value != null) {
       try {
@@ -707,11 +704,11 @@ public class Configuration {
    * the name. This method defaults to returning false for a name that doesn't exist.
    * @param name The name of the system property
    */
-  protected static boolean getPropertyAsBool(String name) {
+  private static boolean getPropertyAsBool(String name) {
     return Boolean.valueOf(getProperty(name));
   }
 
-  protected static Map<String, String> tracerTagsFromEnv() {
+  private static Map<String, String> tracerTagsFromEnv() {
     Map<String, String> tracerTagMaps = null;
     String tracerTags = getProperty(JAEGER_TAGS);
     if (tracerTags != null) {
@@ -731,7 +728,7 @@ public class Configuration {
     return tracerTagMaps;
   }
 
-  protected static String resolveValue(String value) {
+  private static String resolveValue(String value) {
     if (value.startsWith("${") && value.endsWith("}")) {
       String[] ref = value.substring(2, value.length() - 1).split("\\s*:\\s*");
       if (ref.length > 0) {
