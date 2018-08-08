@@ -10,34 +10,7 @@ import io.opentracing.ScopeManager;
 import java.util.List;
 import java.util.Map;
 
-public class TracingFactory {
-  public JaegerTracer createTracer(
-      String serviceName,
-      Reporter reporter,
-      Sampler sampler,
-      PropagationRegistry registry,
-      Clock clock,
-      Metrics metrics,
-      Map<String, Object> tags,
-      boolean zipkinSharedRpcSpan,
-      ScopeManager scopeManager,
-      BaggageRestrictionManager baggageRestrictionManager,
-      boolean expandExceptionLogs) {
-    return new JaegerTracer(
-        serviceName,
-        reporter,
-        sampler,
-        registry,
-        clock,
-        metrics,
-        tags,
-        zipkinSharedRpcSpan,
-        scopeManager,
-        baggageRestrictionManager,
-        expandExceptionLogs,
-        this);
-  }
-
+public class JaegerObjectFactory {
   public JaegerSpan createSpan(
       JaegerTracer tracer,
       String operationName,
@@ -69,9 +42,5 @@ public class TracingFactory {
 
   public JaegerTracer.SpanBuilder createSpanBuilder(JaegerTracer tracer, String operationName) {
     return tracer.new SpanBuilder(operationName);
-  }
-
-  public JaegerTracer.Builder createTracerBuilder(String serviceName) {
-    return new JaegerTracer.Builder(serviceName, this);
   }
 }

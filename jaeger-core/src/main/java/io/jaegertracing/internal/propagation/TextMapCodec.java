@@ -16,10 +16,13 @@ package io.jaegertracing.internal.propagation;
 
 import io.jaegertracing.internal.Constants;
 import io.jaegertracing.internal.JaegerSpanContext;
-import io.jaegertracing.internal.TracingFactory;
+import io.jaegertracing.internal.JaegerObjectFactory;
+import io.jaegertracing.internal.exceptions.EmptyTracerStateStringException;
+import io.jaegertracing.internal.exceptions.MalformedTracerStateStringException;
 import io.jaegertracing.spi.Codec;
 import io.opentracing.propagation.TextMap;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.Collections;
@@ -46,7 +49,7 @@ public class TextMapCodec implements Codec<TextMap> {
 
   private final boolean urlEncoding;
 
-  private final TracingFactory tracingFactory;
+  private final JaegerObjectFactory objectFactory;
 
   public TextMapCodec(boolean urlEncoding) {
     this(builder().withUrlEncoding(urlEncoding));
@@ -56,7 +59,7 @@ public class TextMapCodec implements Codec<TextMap> {
     this.urlEncoding = builder.urlEncoding;
     this.contextKey = builder.spanContextKey;
     this.baggagePrefix = builder.baggagePrefix;
-    this.tracingFactory = builder.tracingFactory;
+    this.objectFactory = builder.objectFactory;
   }
 
   @Override
@@ -76,7 +79,7 @@ public class TextMapCodec implements Codec<TextMap> {
       // TODO there should be no lower-case here
       String key = entry.getKey().toLowerCase(Locale.ROOT);
       if (key.equals(contextKey)) {
-        context = JaegerSpanContext.contextFromString(decodedValue(entry.getValue()), tracingFactory);
+        context = contextFromString(decodedValue(entry.getValue()), objectFactory);
       } else if (key.equals(Constants.DEBUG_ID_HEADER_KEY)) {
         debugId = decodedValue(entry.getValue());
       } else if (key.startsWith(baggagePrefix)) {
@@ -88,7 +91,7 @@ public class TextMapCodec implements Codec<TextMap> {
     }
     if (context == null) {
       if (debugId != null) {
-        return tracingFactory.createSpanContext(0, 0, 0, (byte) 0, Collections.<String, String>emptyMap(), debugId);
+        return objectFactory.createSpanContext(0, 0, 0, (byte) 0, Collections.<String, String>emptyMap(), debugId);
       }
       return null;
     }
@@ -139,6 +142,26 @@ public class TextMapCodec implements Codec<TextMap> {
     }
   }
 
+  public static JaegerSpanContext contextFromString(String value, JaegerObjectFactory objectFactory) {
+    if (value == null || value.equals("")) {
+      throw new EmptyTracerStateStringException();
+    }
+
+    String[] parts = value.split(":");
+    if (parts.length != 4) {
+      throw new MalformedTracerStateStringException(value);
+    }
+
+    // TODO(isaachier): When we drop Java 1.6 support, use Long.parseUnsignedLong instead of using BigInteger.
+    return objectFactory.createSpanContext(
+        new BigInteger(parts[0], 16).longValue(),
+        new BigInteger(parts[1], 16).longValue(),
+        new BigInteger(parts[2], 16).longValue(),
+        new BigInteger(parts[3], 16).byteValue(),
+        Collections.<String, String>emptyMap(),
+        null);
+  }
+
   /**
    * Returns a builder for TextMapCodec.
    *
@@ -153,7 +176,7 @@ public class TextMapCodec implements Codec<TextMap> {
     private boolean urlEncoding;
     private String spanContextKey = SPAN_CONTEXT_KEY;
     private String baggagePrefix = BAGGAGE_KEY_PREFIX;
-    private TracingFactory tracingFactory = new TracingFactory();
+    private JaegerObjectFactory objectFactory = new JaegerObjectFactory();
 
     public Builder withUrlEncoding(boolean urlEncoding) {
       this.urlEncoding = urlEncoding;
@@ -170,8 +193,8 @@ public class TextMapCodec implements Codec<TextMap> {
       return this;
     }
 
-    public Builder withTracingFactory(TracingFactory tracingFactory) {
-      this.tracingFactory = tracingFactory;
+    public Builder withTracingFactory(JaegerObjectFactory objectFactory) {
+      this.objectFactory = objectFactory;
       return this;
     }
 

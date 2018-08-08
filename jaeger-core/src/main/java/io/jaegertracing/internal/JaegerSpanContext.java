@@ -14,10 +14,9 @@
 
 package io.jaegertracing.internal;
 
-import io.jaegertracing.internal.exceptions.EmptyTracerStateStringException;
-import io.jaegertracing.internal.exceptions.MalformedTracerStateStringException;
+import io.jaegertracing.internal.propagation.TextMapCodec;
 import io.opentracing.SpanContext;
-import java.math.BigInteger;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,10 +31,10 @@ public class JaegerSpanContext implements SpanContext {
   private final byte flags;
   private final Map<String, String> baggage;
   private final String debugId;
-  private final TracingFactory tracingFactory;
+  private final JaegerObjectFactory objectFactory;
 
   public JaegerSpanContext(long traceId, long spanId, long parentId, byte flags) {
-    this(traceId, spanId, parentId, flags, Collections.<String, String>emptyMap(), null, new TracingFactory());
+    this(traceId, spanId, parentId, flags, Collections.<String, String>emptyMap(), null, new JaegerObjectFactory());
   }
 
   protected JaegerSpanContext(
@@ -45,7 +44,7 @@ public class JaegerSpanContext implements SpanContext {
       byte flags,
       Map<String, String> baggage,
       String debugId,
-      TracingFactory tracingFactory) {
+      JaegerObjectFactory objectFactory) {
     if (baggage == null) {
       throw new NullPointerException();
     }
@@ -55,7 +54,7 @@ public class JaegerSpanContext implements SpanContext {
     this.flags = flags;
     this.baggage = baggage;
     this.debugId = debugId;
-    this.tracingFactory = tracingFactory;
+    this.objectFactory = objectFactory;
   }
 
   @Override
@@ -110,32 +109,9 @@ public class JaegerSpanContext implements SpanContext {
     return contextAsString();
   }
 
+  @Deprecated
   public static JaegerSpanContext contextFromString(String value) {
-    return contextFromString(value, new TracingFactory());
-  }
-
-  public static JaegerSpanContext contextFromString(String value, TracingFactory factory)
-      throws MalformedTracerStateStringException, EmptyTracerStateStringException {
-    if (value == null || value.equals("")) {
-      throw new EmptyTracerStateStringException();
-    }
-
-    String[] parts = value.split(":");
-    if (parts.length != 4) {
-      throw new MalformedTracerStateStringException(value);
-    }
-
-    /*
-      oibe: because java doesn't like to convert large hex strings to longs
-      we should write this manually instead of using BigInteger.
-    */
-    return factory.createSpanContext(
-        new BigInteger(parts[0], 16).longValue(),
-        new BigInteger(parts[1], 16).longValue(),
-        new BigInteger(parts[2], 16).longValue(),
-        new BigInteger(parts[3], 16).byteValue(),
-        Collections.<String, String>emptyMap(),
-        null);
+    return TextMapCodec.contextFromString(value, new JaegerObjectFactory());
   }
 
   public JaegerSpanContext withBaggageItem(String key, String val) {
@@ -145,15 +121,15 @@ public class JaegerSpanContext implements SpanContext {
     } else {
       newBaggage.put(key, val);
     }
-    return tracingFactory.createSpanContext(traceId, spanId, parentId, flags, newBaggage, debugId);
+    return objectFactory.createSpanContext(traceId, spanId, parentId, flags, newBaggage, debugId);
   }
 
   public JaegerSpanContext withBaggage(Map<String, String> newBaggage) {
-    return tracingFactory.createSpanContext(traceId, spanId, parentId, flags, newBaggage, debugId);
+    return objectFactory.createSpanContext(traceId, spanId, parentId, flags, newBaggage, debugId);
   }
 
   public JaegerSpanContext withFlags(byte flags) {
-    return tracingFactory.createSpanContext(traceId, spanId, parentId, flags, baggage, debugId);
+    return objectFactory.createSpanContext(traceId, spanId, parentId, flags, baggage, debugId);
   }
 
   /**
@@ -182,12 +158,12 @@ public class JaegerSpanContext implements SpanContext {
    *
    * @see Constants#DEBUG_ID_HEADER_KEY
    */
-  public static JaegerSpanContext withDebugId(String debugId, TracingFactory factory) {
+  public static JaegerSpanContext withDebugId(String debugId, JaegerObjectFactory factory) {
     return factory.createSpanContext(0, 0, 0, (byte) 0, Collections.<String, String>emptyMap(), debugId);
   }
 
   public static JaegerSpanContext withDebugId(String debugId) {
-    return withDebugId(debugId, new TracingFactory());
+    return withDebugId(debugId, new JaegerObjectFactory());
   }
 
   String getDebugId() {

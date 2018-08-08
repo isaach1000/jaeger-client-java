@@ -12,14 +12,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class JaegerSubclassTest {
   private static class CustomConfiguration extends Configuration {
-    public CustomConfiguration(String serviceName, TracingFactory tracingFactory) {
-      super(serviceName, tracingFactory);
+    public CustomConfiguration(String serviceName, JaegerObjectFactory objectFactory) {
+      super(serviceName);
     }
 
     @Override
@@ -31,17 +30,50 @@ public class JaegerSubclassTest {
     public synchronized CustomTracer getTracer() {
       return (CustomTracer) super.getTracer();
     }
+
+    @Override
+    protected CustomTracer.CustomBuilder createTracerBuilder(String serviceName) {
+      return new CustomTracer.CustomBuilder(serviceName, new CustomObjectFactory());
+    }
   }
 
   private static class CustomTracer extends JaegerTracer {
     public static class CustomBuilder extends JaegerTracer.Builder {
-      public CustomBuilder(String serviceName, TracingFactory tracingFactory) {
-        super(serviceName, tracingFactory);
+      public CustomBuilder(String serviceName, JaegerObjectFactory objectFactory) {
+        super(serviceName, objectFactory);
       }
 
       @Override
       public CustomTracer build() {
         return (CustomTracer) super.build();
+      }
+
+      @Override
+      protected JaegerTracer createTracer(String serviceName,
+                                          Reporter reporter,
+                                          Sampler sampler,
+                                          PropagationRegistry registry,
+                                          Clock clock,
+                                          Metrics metrics,
+                                          Map<String, Object> tags,
+                                          boolean zipkinSharedRpcSpan,
+                                          ScopeManager scopeManager,
+                                          BaggageRestrictionManager baggageRestrictionManager,
+                                          boolean expandExceptionLogs,
+                                          JaegerObjectFactory objectFactory) {
+        return new CustomTracer(
+            serviceName,
+            reporter,
+            sampler,
+            registry,
+            clock,
+            metrics,
+            tags,
+            zipkinSharedRpcSpan,
+            scopeManager,
+            baggageRestrictionManager,
+            expandExceptionLogs,
+            objectFactory);
       }
     }
 
@@ -68,7 +100,7 @@ public class JaegerSubclassTest {
         ScopeManager scopeManager,
         BaggageRestrictionManager baggageRestrictionManager,
         boolean expandExceptionLogs,
-        TracingFactory tracingFactory) {
+        JaegerObjectFactory objectFactory) {
       super(
           serviceName,
           reporter,
@@ -81,7 +113,7 @@ public class JaegerSubclassTest {
           scopeManager,
           baggageRestrictionManager,
           expandExceptionLogs,
-          tracingFactory);
+          objectFactory);
     }
   }
 
@@ -120,8 +152,8 @@ public class JaegerSubclassTest {
         byte flags,
         Map<String, String> baggage,
         String debugId,
-        TracingFactory tracingFactory) {
-      super(traceId, spanId, parentId, flags, baggage, debugId, tracingFactory);
+        JaegerObjectFactory objectFactory) {
+      super(traceId, spanId, parentId, flags, baggage, debugId, objectFactory);
     }
 
     @Override
@@ -140,35 +172,7 @@ public class JaegerSubclassTest {
     }
   }
 
-  private static class CustomTracingFactory extends TracingFactory {
-    @Override
-    public CustomTracer createTracer(
-        String serviceName,
-        Reporter reporter,
-        Sampler sampler,
-        PropagationRegistry registry,
-        Clock clock,
-        Metrics metrics,
-        Map<String, Object> tags,
-        boolean zipkinSharedRpcSpan,
-        ScopeManager scopeManager,
-        BaggageRestrictionManager baggageRestrictionManager,
-        boolean expandExceptionLogs) {
-      return new CustomTracer(
-          serviceName,
-          reporter,
-          sampler,
-          registry,
-          clock,
-          metrics,
-          tags,
-          zipkinSharedRpcSpan,
-          scopeManager,
-          baggageRestrictionManager,
-          expandExceptionLogs,
-          this);
-    }
-
+  private static class CustomObjectFactory extends JaegerObjectFactory {
     @Override
     public CustomSpan createSpan(
         JaegerTracer tracer,
@@ -204,17 +208,12 @@ public class JaegerSubclassTest {
     public CustomTracer.CustomSpanBuilder createSpanBuilder(JaegerTracer tracer, String operationName) {
       return ((CustomTracer)tracer).new CustomSpanBuilder(operationName);
     }
-
-    @Override
-    public CustomTracer.CustomBuilder createTracerBuilder(String serviceName) {
-      return new CustomTracer.CustomBuilder(serviceName, this);
-    }
   }
 
   @Test
   public void testTracer() {
-    final CustomTracingFactory tracingFactory = new CustomTracingFactory();
-    final CustomConfiguration config = new CustomConfiguration("test-service", tracingFactory);
+    final CustomObjectFactory tracingObjectFactory = new CustomObjectFactory();
+    final CustomConfiguration config = new CustomConfiguration("test-service", tracingObjectFactory);
     final CustomTracer.CustomBuilder builder = config.getTracerBuilder();
     final CustomTracer tracer = builder.build();
     final Scope scope = tracer.buildSpan("test-operation").startActive(true);

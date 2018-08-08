@@ -41,7 +41,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
-import io.opentracing.propagation.TextMap;
 import io.opentracing.tag.Tags;
 import io.opentracing.util.ThreadLocalScopeManager;
 import java.io.Closeable;
@@ -76,7 +75,7 @@ public class JaegerTracer implements Tracer, Closeable {
   private final BaggageRestrictionManager baggageRestrictionManager;
   private final BaggageSetter baggageSetter;
   private final boolean expandExceptionLogs;
-  private final TracingFactory tracingFactory;
+  private final JaegerObjectFactory objectFactory;
 
   protected JaegerTracer(
       String serviceName,
@@ -90,7 +89,7 @@ public class JaegerTracer implements Tracer, Closeable {
       ScopeManager scopeManager,
       BaggageRestrictionManager baggageRestrictionManager,
       boolean expandExceptionLogs,
-      TracingFactory tracingFactory) {
+      JaegerObjectFactory objectFactory) {
     this.serviceName = serviceName;
     this.reporter = reporter;
     this.sampler = sampler;
@@ -102,7 +101,7 @@ public class JaegerTracer implements Tracer, Closeable {
     this.baggageRestrictionManager = baggageRestrictionManager;
     this.baggageSetter = new BaggageSetter(baggageRestrictionManager, metrics);
     this.expandExceptionLogs = expandExceptionLogs;
-    this.tracingFactory = tracingFactory;
+    this.objectFactory = objectFactory;
 
     this.version = loadVersion();
 
@@ -190,7 +189,7 @@ public class JaegerTracer implements Tracer, Closeable {
 
   @Override
   public JaegerTracer.SpanBuilder buildSpan(String operationName) {
-    return tracingFactory.createSpanBuilder(this, operationName);
+    return objectFactory.createSpanBuilder(this, operationName);
   }
 
   @Override
@@ -321,7 +320,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      return JaegerTracer.this.tracingFactory.createSpanContext(id, id, 0, flags, Collections.<String, String>emptyMap(), debugId);
+      return JaegerTracer.this.objectFactory.createSpanContext(id, id, 0, flags, Collections.<String, String>emptyMap(), debugId);
     }
 
     private Map<String, String> createChildBaggage() {
@@ -360,7 +359,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      return JaegerTracer.this.tracingFactory.createSpanContext(
+      return JaegerTracer.this.objectFactory.createSpanContext(
           preferredReference.getTraceId(),
           Utils.uniqueId(),
           preferredReference.getSpanId(),
@@ -435,7 +434,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      JaegerSpan jaegerSpan = JaegerTracer.this.tracingFactory.createSpan(
+      JaegerSpan jaegerSpan = JaegerTracer.this.objectFactory.createSpan(
               JaegerTracer.this,
               operationName,
               context,
@@ -485,16 +484,16 @@ public class JaegerTracer implements Tracer, Closeable {
     private ScopeManager scopeManager = new ThreadLocalScopeManager();
     private BaggageRestrictionManager baggageRestrictionManager = new DefaultBaggageRestrictionManager();
     private boolean expandExceptionLogs;
-    private TracingFactory tracingFactory;
+    private JaegerObjectFactory objectFactory;
 
-    public Builder(String serviceName, TracingFactory tracingFactory) {
+    public Builder(String serviceName, JaegerObjectFactory objectFactory) {
       this.serviceName = checkValidServiceName(serviceName);
-      this.tracingFactory = tracingFactory;
+      this.objectFactory = objectFactory;
 
-      TextMapCodec textMapCodec = TextMapCodec.builder().withUrlEncoding(false).withTracingFactory(tracingFactory).build();
+      TextMapCodec textMapCodec = TextMapCodec.builder().withUrlEncoding(false).withTracingFactory(this.objectFactory).build();
       this.registerInjector(Format.Builtin.TEXT_MAP, textMapCodec);
       this.registerExtractor(Format.Builtin.TEXT_MAP, textMapCodec);
-      TextMapCodec httpCodec = TextMapCodec.builder().withUrlEncoding(true).withTracingFactory(tracingFactory).build();
+      TextMapCodec httpCodec = TextMapCodec.builder().withUrlEncoding(true).withTracingFactory(this.objectFactory).build();
       this.registerInjector(Format.Builtin.HTTP_HEADERS, httpCodec);
       this.registerExtractor(Format.Builtin.HTTP_HEADERS, httpCodec);
       // TODO binary codec not implemented
@@ -502,7 +501,7 @@ public class JaegerTracer implements Tracer, Closeable {
 
     @Deprecated
     public Builder(String serviceName) {
-      this(serviceName, new TracingFactory());
+      this(serviceName, new JaegerObjectFactory());
     }
 
     /**
@@ -604,8 +603,24 @@ public class JaegerTracer implements Tracer, Closeable {
             .withMetrics(metrics)
             .build();
       }
-      return tracingFactory.createTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
-          zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs);
+      return createTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
+          zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs, objectFactory);
+    }
+
+    protected JaegerTracer createTracer(String serviceName,
+                                        Reporter reporter,
+                                        Sampler sampler,
+                                        PropagationRegistry registry,
+                                        Clock clock,
+                                        Metrics metrics,
+                                        Map<String, Object> tags,
+                                        boolean zipkinSharedRpcSpan,
+                                        ScopeManager scopeManager,
+                                        BaggageRestrictionManager baggageRestrictionManager,
+                                        boolean expandExceptionLogs,
+                                        JaegerObjectFactory objectFactory) {
+      return new JaegerTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
+          zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs, objectFactory);
     }
 
     public static String checkValidServiceName(String serviceName) {

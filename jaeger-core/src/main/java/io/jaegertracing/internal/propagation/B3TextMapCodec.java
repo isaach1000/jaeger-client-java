@@ -16,7 +16,7 @@ package io.jaegertracing.internal.propagation;
 
 import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerTracer;
-import io.jaegertracing.internal.TracingFactory;
+import io.jaegertracing.internal.JaegerObjectFactory;
 import io.jaegertracing.spi.BaggageRestrictionManager;
 import io.jaegertracing.spi.Codec;
 import io.opentracing.propagation.TextMap;
@@ -58,7 +58,7 @@ public class B3TextMapCodec implements Codec<TextMap> {
 
   private static final PrefixedKeys keys = new PrefixedKeys();
   private final String baggagePrefix;
-  private final TracingFactory tracingFactory;
+  private final JaegerObjectFactory objectFactory;
 
   /**
    * @deprecated use {@link Builder} instead
@@ -70,7 +70,7 @@ public class B3TextMapCodec implements Codec<TextMap> {
 
   private B3TextMapCodec(Builder builder) {
     this.baggagePrefix = builder.baggagePrefix;
-    this.tracingFactory = builder.tracingFactory;
+    this.objectFactory = builder.objectFactory;
   }
 
   @Override
@@ -132,7 +132,7 @@ public class B3TextMapCodec implements Codec<TextMap> {
 
   public static class Builder {
     private String baggagePrefix = BAGGAGE_PREFIX;
-    private TracingFactory tracingFactory = new TracingFactory();
+    private JaegerObjectFactory objectFactory = new JaegerObjectFactory();
 
     /**
      * Specify baggage prefix. The default is {@value B3TextMapCodec#BAGGAGE_PREFIX}
@@ -144,10 +144,10 @@ public class B3TextMapCodec implements Codec<TextMap> {
 
     /**
      * Specify JaegerSpanContext factory. Used for creating new span contexts. The default factory is an instance of
-     * {@link TracingFactory}.
+     * {@link JaegerObjectFactory}.
      */
-    public Builder withTracingFactory(TracingFactory tracingFactory) {
-      this.tracingFactory = tracingFactory;
+    public Builder withTracingFactory(JaegerObjectFactory objectFactory) {
+      this.objectFactory = objectFactory;
       return this;
     }
 

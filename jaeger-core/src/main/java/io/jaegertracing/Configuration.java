@@ -15,7 +15,7 @@
 package io.jaegertracing;
 
 import io.jaegertracing.internal.JaegerTracer;
-import io.jaegertracing.internal.TracingFactory;
+import io.jaegertracing.internal.JaegerObjectFactory;
 import io.jaegertracing.internal.metrics.Metrics;
 import io.jaegertracing.internal.metrics.NoopMetricsFactory;
 import io.jaegertracing.internal.propagation.B3TextMapCodec;
@@ -167,7 +167,6 @@ public class Configuration {
    * The serviceName that the tracer will use
    */
   private String serviceName;
-  private TracingFactory tracingFactory;
   private SamplerConfiguration samplerConfig;
   private ReporterConfiguration reporterConfig;
   private CodecConfiguration codecConfig;
@@ -179,13 +178,8 @@ public class Configuration {
    */
   private JaegerTracer tracer;
 
-  public Configuration(String serviceName, TracingFactory tracingFactory) {
-    this.serviceName = JaegerTracer.Builder.checkValidServiceName(serviceName);
-    this.tracingFactory = tracingFactory;
-  }
-
   public Configuration(String serviceName) {
-    this(serviceName, new TracingFactory());
+    this.serviceName = JaegerTracer.Builder.checkValidServiceName(serviceName);
   }
 
   /**
@@ -196,11 +190,11 @@ public class Configuration {
   }
 
   public static Configuration fromEnv(String serviceName) {
-    return new Configuration(serviceName).
-        withTracerTags(tracerTagsFromEnv())
-        .withReporter(ReporterConfiguration.fromEnv())
-        .withSampler(SamplerConfiguration.fromEnv())
-        .withCodec(CodecConfiguration.fromEnv());
+    return new Configuration(serviceName)
+            .withTracerTags(tracerTagsFromEnv())
+            .withReporter(ReporterConfiguration.fromEnv())
+            .withSampler(SamplerConfiguration.fromEnv())
+            .withCodec(CodecConfiguration.fromEnv());
   }
 
   public JaegerTracer.Builder getTracerBuilder() {
@@ -219,13 +213,17 @@ public class Configuration {
     Metrics metrics = new Metrics(metricsFactory);
     Reporter reporter = reporterConfig.getReporter(metrics);
     Sampler sampler = samplerConfig.createSampler(serviceName, metrics);
-    JaegerTracer.Builder builder = tracingFactory.createTracerBuilder(serviceName)
+    JaegerTracer.Builder builder = createTracerBuilder(serviceName)
         .withSampler(sampler)
         .withReporter(reporter)
         .withMetrics(metrics)
         .withTags(tracerTags);
     codecConfig.apply(builder);
     return builder;
+  }
+
+  protected JaegerTracer.Builder createTracerBuilder(String serviceName) {
+    return new JaegerTracer.Builder(serviceName, new JaegerObjectFactory());
   }
 
   public synchronized JaegerTracer getTracer() {
