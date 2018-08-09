@@ -109,11 +109,6 @@ public class JaegerSpanContext implements SpanContext {
     return contextAsString();
   }
 
-  @Deprecated
-  public static JaegerSpanContext contextFromString(String value) {
-    return TextMapCodec.contextFromString(value, new JaegerObjectFactory());
-  }
-
   public JaegerSpanContext withBaggageItem(String key, String val) {
     Map<String, String> newBaggage = new HashMap<String, String>(this.baggage);
     if (val == null) {
@@ -143,27 +138,6 @@ public class JaegerSpanContext implements SpanContext {
    */
   boolean isDebugIdContainerOnly() {
     return traceId == 0 && debugId != null;
-  }
-
-  /**
-   * Create a new dummy JaegerSpanContext as a container for debugId string. This is used when
-   * "jaeger-debug-id" header is passed in the request headers and forces the trace to be sampled as
-   * debug trace, and the value of header recorded as a span tag to serve as a searchable
-   * correlation ID.
-   *
-   * @param debugId arbitrary string used as correlation ID.
-   * @param factory tracing object factory.
-   *
-   * @return new dummy JaegerSpanContext that serves as a container for debugId only.
-   *
-   * @see Constants#DEBUG_ID_HEADER_KEY
-   */
-  public static JaegerSpanContext withDebugId(String debugId, JaegerObjectFactory factory) {
-    return factory.createSpanContext(0, 0, 0, (byte) 0, Collections.<String, String>emptyMap(), debugId);
-  }
-
-  public static JaegerSpanContext withDebugId(String debugId) {
-    return withDebugId(debugId, new JaegerObjectFactory());
   }
 
   String getDebugId() {

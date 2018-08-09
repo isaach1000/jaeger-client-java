@@ -17,7 +17,7 @@ import java.util.Map;
 
 public class JaegerSubclassTest {
   private static class CustomConfiguration extends Configuration {
-    public CustomConfiguration(String serviceName, JaegerObjectFactory objectFactory) {
+    private CustomConfiguration(String serviceName, JaegerObjectFactory objectFactory) {
       super(serviceName);
     }
 
@@ -33,14 +33,14 @@ public class JaegerSubclassTest {
 
     @Override
     protected CustomTracer.CustomBuilder createTracerBuilder(String serviceName) {
-      return new CustomTracer.CustomBuilder(serviceName, new CustomObjectFactory());
+      return new CustomTracer.CustomBuilder(serviceName);
     }
   }
 
   private static class CustomTracer extends JaegerTracer {
     public static class CustomBuilder extends JaegerTracer.Builder {
-      public CustomBuilder(String serviceName, JaegerObjectFactory objectFactory) {
-        super(serviceName, objectFactory);
+      private CustomBuilder(String serviceName) {
+        super(serviceName);
       }
 
       @Override
@@ -73,7 +73,12 @@ public class JaegerSubclassTest {
             scopeManager,
             baggageRestrictionManager,
             expandExceptionLogs,
-            objectFactory);
+            (CustomObjectFactory) objectFactory);
+      }
+
+      @Override
+      protected CustomObjectFactory createObjectFactory() {
+        return new CustomObjectFactory();
       }
     }
 
@@ -100,7 +105,7 @@ public class JaegerSubclassTest {
         ScopeManager scopeManager,
         BaggageRestrictionManager baggageRestrictionManager,
         boolean expandExceptionLogs,
-        JaegerObjectFactory objectFactory) {
+        CustomObjectFactory objectFactory) {
       super(
           serviceName,
           reporter,
@@ -118,10 +123,10 @@ public class JaegerSubclassTest {
   }
 
   private static class CustomSpan extends JaegerSpan {
-    public CustomSpan(
-        JaegerTracer tracer,
+    private CustomSpan(
+        CustomTracer tracer,
         String operationName,
-        JaegerSpanContext context,
+        CustomSpanContext context,
         long startTimeMicroseconds,
         long startTimeNanoTicks,
         boolean computeDurationViaNanoTicks,
@@ -184,9 +189,9 @@ public class JaegerSubclassTest {
         Map<String, Object> tags,
         List<Reference> references) {
       return new CustomSpan(
-          tracer,
+          (CustomTracer) tracer,
           operationName,
-          context,
+          (CustomSpanContext) context,
           startTimeMicroseconds,
           startTimeNanoTicks,
           computeDurationViaNanoTicks,

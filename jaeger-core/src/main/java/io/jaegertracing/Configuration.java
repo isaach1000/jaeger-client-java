@@ -15,7 +15,6 @@
 package io.jaegertracing;
 
 import io.jaegertracing.internal.JaegerTracer;
-import io.jaegertracing.internal.JaegerObjectFactory;
 import io.jaegertracing.internal.metrics.Metrics;
 import io.jaegertracing.internal.metrics.NoopMetricsFactory;
 import io.jaegertracing.internal.propagation.B3TextMapCodec;
@@ -223,7 +222,7 @@ public class Configuration {
   }
 
   protected JaegerTracer.Builder createTracerBuilder(String serviceName) {
-    return new JaegerTracer.Builder(serviceName, new JaegerObjectFactory());
+    return new JaegerTracer.Builder(serviceName);
   }
 
   public synchronized JaegerTracer getTracer() {

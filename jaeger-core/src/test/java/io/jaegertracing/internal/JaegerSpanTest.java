@@ -27,6 +27,7 @@ import io.jaegertracing.internal.baggage.Restriction;
 import io.jaegertracing.internal.clock.Clock;
 import io.jaegertracing.internal.metrics.InMemoryMetricsFactory;
 import io.jaegertracing.internal.metrics.Metrics;
+import io.jaegertracing.internal.propagation.TextMapCodec;
 import io.jaegertracing.internal.reporters.InMemoryReporter;
 import io.jaegertracing.internal.samplers.ConstSampler;
 import io.jaegertracing.spi.BaggageRestrictionManager;
@@ -35,6 +36,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
 import io.opentracing.noop.NoopSpan;
+import io.opentracing.propagation.TextMap;
 import io.opentracing.tag.Tags;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -211,7 +213,7 @@ public class JaegerSpanTest {
   public void testSpanToString() {
     JaegerSpan jaegerSpan = tracer.buildSpan("test-operation").start();
     JaegerSpanContext expectedContext =  jaegerSpan.context();
-    JaegerSpanContext actualContext = JaegerSpanContext.contextFromString(expectedContext.contextAsString());
+    JaegerSpanContext actualContext = TextMapCodec.contextFromString(expectedContext.contextAsString(), new JaegerObjectFactory());
 
     assertEquals(expectedContext.getTraceId(), actualContext.getTraceId());
     assertEquals(expectedContext.getSpanId(), actualContext.getSpanId());

@@ -72,7 +72,6 @@ public class JaegerTracer implements Tracer, Closeable {
   private final Map<String, ?> tags;
   private final boolean zipkinSharedRpcSpan;
   private final ScopeManager scopeManager;
-  private final BaggageRestrictionManager baggageRestrictionManager;
   private final BaggageSetter baggageSetter;
   private final boolean expandExceptionLogs;
   private final JaegerObjectFactory objectFactory;
@@ -98,7 +97,6 @@ public class JaegerTracer implements Tracer, Closeable {
     this.metrics = metrics;
     this.zipkinSharedRpcSpan = zipkinSharedRpcSpan;
     this.scopeManager = scopeManager;
-    this.baggageRestrictionManager = baggageRestrictionManager;
     this.baggageSetter = new BaggageSetter(baggageRestrictionManager, metrics);
     this.expandExceptionLogs = expandExceptionLogs;
     this.objectFactory = objectFactory;
@@ -320,7 +318,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      return JaegerTracer.this.objectFactory.createSpanContext(id, id, 0, flags, Collections.<String, String>emptyMap(), debugId);
+      return getObjectFactory().createSpanContext(id, id, 0, flags, Collections.<String, String>emptyMap(), debugId);
     }
 
     private Map<String, String> createChildBaggage() {
@@ -359,7 +357,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      return JaegerTracer.this.objectFactory.createSpanContext(
+      return getObjectFactory().createSpanContext(
           preferredReference.getTraceId(),
           Utils.uniqueId(),
           preferredReference.getSpanId(),
@@ -434,7 +432,7 @@ public class JaegerTracer implements Tracer, Closeable {
         }
       }
 
-      JaegerSpan jaegerSpan = JaegerTracer.this.objectFactory.createSpan(
+      JaegerSpan jaegerSpan = getObjectFactory().createSpan(
               JaegerTracer.this,
               operationName,
               context,
@@ -467,6 +465,10 @@ public class JaegerTracer implements Tracer, Closeable {
     public JaegerSpan startManual() {
       return start();
     }
+
+    private JaegerObjectFactory getObjectFactory() {
+      return JaegerTracer.this.objectFactory;
+    }
   }
 
   /**
@@ -486,9 +488,9 @@ public class JaegerTracer implements Tracer, Closeable {
     private boolean expandExceptionLogs;
     private JaegerObjectFactory objectFactory;
 
-    public Builder(String serviceName, JaegerObjectFactory objectFactory) {
+    public Builder(String serviceName) {
       this.serviceName = checkValidServiceName(serviceName);
-      this.objectFactory = objectFactory;
+      this.objectFactory = createObjectFactory();
 
       TextMapCodec textMapCodec = TextMapCodec.builder().withUrlEncoding(false).withTracingFactory(this.objectFactory).build();
       this.registerInjector(Format.Builtin.TEXT_MAP, textMapCodec);
@@ -497,11 +499,6 @@ public class JaegerTracer implements Tracer, Closeable {
       this.registerInjector(Format.Builtin.HTTP_HEADERS, httpCodec);
       this.registerExtractor(Format.Builtin.HTTP_HEADERS, httpCodec);
       // TODO binary codec not implemented
-    }
-
-    @Deprecated
-    public Builder(String serviceName) {
-      this(serviceName, new JaegerObjectFactory());
     }
 
     /**
@@ -621,6 +618,10 @@ public class JaegerTracer implements Tracer, Closeable {
                                         JaegerObjectFactory objectFactory) {
       return new JaegerTracer(serviceName, reporter, sampler, registry, clock, metrics, tags,
           zipkinSharedRpcSpan, scopeManager, baggageRestrictionManager, expandExceptionLogs, objectFactory);
+    }
+
+    protected JaegerObjectFactory createObjectFactory() {
+      return new JaegerObjectFactory();
     }
 
     public static String checkValidServiceName(String serviceName) {
