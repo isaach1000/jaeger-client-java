@@ -93,7 +93,7 @@ public class JaegerSubclassTest {
       }
     }
 
-    public CustomTracer(
+    private CustomTracer(
         String serviceName,
         Reporter reporter,
         Sampler sampler,
@@ -150,14 +150,14 @@ public class JaegerSubclassTest {
   }
 
   private static class CustomSpanContext extends JaegerSpanContext {
-    public CustomSpanContext(
+    private CustomSpanContext(
         long traceId,
         long spanId,
         long parentId,
         byte flags,
         Map<String, String> baggage,
         String debugId,
-        JaegerObjectFactory objectFactory) {
+        CustomObjectFactory objectFactory) {
       super(traceId, spanId, parentId, flags, baggage, debugId, objectFactory);
     }
 
