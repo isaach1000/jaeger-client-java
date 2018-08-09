@@ -14,9 +14,9 @@
 
 package io.jaegertracing.internal.propagation;
 
+import io.jaegertracing.internal.JaegerObjectFactory;
 import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerTracer;
-import io.jaegertracing.internal.JaegerObjectFactory;
 import io.jaegertracing.spi.BaggageRestrictionManager;
 import io.jaegertracing.spi.Codec;
 import io.opentracing.propagation.TextMap;
@@ -143,8 +143,8 @@ public class B3TextMapCodec implements Codec<TextMap> {
     }
 
     /**
-     * Specify JaegerSpanContext factory. Used for creating new span contexts. The default factory is an instance of
-     * {@link JaegerObjectFactory}.
+     * Specify JaegerSpanContext factory. Used for creating new span contexts. The default factory
+     * is an instance of {@link JaegerObjectFactory}.
      */
     public Builder withTracingFactory(JaegerObjectFactory objectFactory) {
       this.objectFactory = objectFactory;

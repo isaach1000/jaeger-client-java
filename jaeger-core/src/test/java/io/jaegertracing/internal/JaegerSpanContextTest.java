@@ -16,7 +16,6 @@ package io.jaegertracing.internal;
 
 import static org.junit.Assert.assertEquals;
 
-import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.exceptions.EmptyTracerStateStringException;
 import io.jaegertracing.internal.exceptions.MalformedTracerStateStringException;
 import io.jaegertracing.internal.propagation.TextMapCodec;
@@ -36,7 +35,8 @@ public class JaegerSpanContextTest {
 
   @Test
   public void testContextFromString() throws Exception {
-    JaegerSpanContext context = TextMapCodec.contextFromString("ff:dd:cc:4", new JaegerObjectFactory());
+    JaegerSpanContext context =
+        TextMapCodec.contextFromString("ff:dd:cc:4", new JaegerObjectFactory());
     assertEquals(context.getTraceId(), 255);
     assertEquals(context.getSpanId(), 221);
     assertEquals(context.getParentId(), 204);
@@ -58,7 +58,8 @@ public class JaegerSpanContextTest {
 
     assertEquals(
         "fffffffffffffff6:fffffffffffffff6:fffffffffffffff6:81", context.contextAsString());
-    JaegerSpanContext contextFromStr = TextMapCodec.contextFromString(context.contextAsString(), new JaegerObjectFactory());
+    JaegerSpanContext contextFromStr =
+        TextMapCodec.contextFromString(context.contextAsString(), new JaegerObjectFactory());
     assertEquals(traceId, contextFromStr.getTraceId());
     assertEquals(spanId, contextFromStr.getSpanId());
     assertEquals(parentId, contextFromStr.getParentId());

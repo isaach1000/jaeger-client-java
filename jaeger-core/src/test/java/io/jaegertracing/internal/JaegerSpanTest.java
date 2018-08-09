@@ -36,7 +36,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
 import io.opentracing.noop.NoopSpan;
-import io.opentracing.propagation.TextMap;
 import io.opentracing.tag.Tags;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -213,7 +212,9 @@ public class JaegerSpanTest {
   public void testSpanToString() {
     JaegerSpan jaegerSpan = tracer.buildSpan("test-operation").start();
     JaegerSpanContext expectedContext =  jaegerSpan.context();
-    JaegerSpanContext actualContext = TextMapCodec.contextFromString(expectedContext.contextAsString(), new JaegerObjectFactory());
+    JaegerSpanContext actualContext =
+        TextMapCodec.contextFromString(
+            expectedContext.contextAsString(), new JaegerObjectFactory());
 
     assertEquals(expectedContext.getTraceId(), actualContext.getTraceId());
     assertEquals(expectedContext.getSpanId(), actualContext.getSpanId());

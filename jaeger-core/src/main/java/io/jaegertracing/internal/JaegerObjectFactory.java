@@ -1,11 +1,18 @@
-package io.jaegertracing.internal;
+/*
+ * Copyright (c) 2018, Uber Technologies, Inc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 
-import io.jaegertracing.internal.clock.Clock;
-import io.jaegertracing.internal.metrics.Metrics;
-import io.jaegertracing.spi.BaggageRestrictionManager;
-import io.jaegertracing.spi.Reporter;
-import io.jaegertracing.spi.Sampler;
-import io.opentracing.ScopeManager;
+package io.jaegertracing.internal;
 
 import java.util.List;
 import java.util.Map;
@@ -31,12 +38,13 @@ public class JaegerObjectFactory {
         references);
   }
 
-  public JaegerSpanContext createSpanContext(long traceId,
-                                             long spanId,
-                                             long parentId,
-                                             byte flags,
-                                             Map<String, String> baggage,
-                                             String debugId) {
+  public JaegerSpanContext createSpanContext(
+      long traceId,
+      long spanId,
+      long parentId,
+      byte flags,
+      Map<String, String> baggage,
+      String debugId) {
     return new JaegerSpanContext(traceId, spanId, parentId, flags, baggage, debugId, this);
   }
 

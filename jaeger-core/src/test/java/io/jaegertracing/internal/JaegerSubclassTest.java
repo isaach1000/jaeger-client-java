@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2018, Uber Technologies, Inc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package io.jaegertracing.internal;
 
 import io.jaegertracing.Configuration;
@@ -8,12 +22,11 @@ import io.jaegertracing.spi.Reporter;
 import io.jaegertracing.spi.Sampler;
 import io.opentracing.Scope;
 import io.opentracing.ScopeManager;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class JaegerSubclassTest {
   private static class CustomConfiguration extends Configuration {
@@ -49,18 +62,19 @@ public class JaegerSubclassTest {
       }
 
       @Override
-      protected JaegerTracer createTracer(String serviceName,
-                                          Reporter reporter,
-                                          Sampler sampler,
-                                          PropagationRegistry registry,
-                                          Clock clock,
-                                          Metrics metrics,
-                                          Map<String, Object> tags,
-                                          boolean zipkinSharedRpcSpan,
-                                          ScopeManager scopeManager,
-                                          BaggageRestrictionManager baggageRestrictionManager,
-                                          boolean expandExceptionLogs,
-                                          JaegerObjectFactory objectFactory) {
+      protected JaegerTracer createTracer(
+          String serviceName,
+          Reporter reporter,
+          Sampler sampler,
+          PropagationRegistry registry,
+          Clock clock,
+          Metrics metrics,
+          Map<String, Object> tags,
+          boolean zipkinSharedRpcSpan,
+          ScopeManager scopeManager,
+          BaggageRestrictionManager baggageRestrictionManager,
+          boolean expandExceptionLogs,
+          JaegerObjectFactory objectFactory) {
         return new CustomTracer(
             serviceName,
             reporter,
@@ -200,32 +214,36 @@ public class JaegerSubclassTest {
     }
 
     @Override
-    public CustomSpanContext createSpanContext(long traceId,
-                                               long spanId,
-                                               long parentId,
-                                               byte flags,
-                                               Map<String, String> baggage,
-                                               String debugId) {
+    public CustomSpanContext createSpanContext(
+        long traceId,
+        long spanId,
+        long parentId,
+        byte flags,
+        Map<String, String> baggage,
+        String debugId) {
       return new CustomSpanContext(traceId, spanId, parentId, flags, baggage, debugId, this);
     }
 
     @Override
-    public CustomTracer.CustomSpanBuilder createSpanBuilder(JaegerTracer tracer, String operationName) {
-      return ((CustomTracer)tracer).new CustomSpanBuilder(operationName);
+    public CustomTracer.CustomSpanBuilder createSpanBuilder(
+        JaegerTracer tracer, String operationName) {
+      return ((CustomTracer) tracer).new CustomSpanBuilder(operationName);
     }
   }
 
   @Test
   public void testTracer() {
     final CustomObjectFactory tracingObjectFactory = new CustomObjectFactory();
-    final CustomConfiguration config = new CustomConfiguration("test-service", tracingObjectFactory);
+    final CustomConfiguration config =
+        new CustomConfiguration("test-service", tracingObjectFactory);
     final CustomTracer.CustomBuilder builder = config.getTracerBuilder();
     final CustomTracer tracer = builder.build();
     final Scope scope = tracer.buildSpan("test-operation").startActive(true);
     Assert.assertNotNull(tracer.scopeManager().active());
     Assert.assertTrue(tracer.scopeManager().active().span() instanceof CustomSpan);
     Assert.assertTrue(tracer.scopeManager().active().span().context() instanceof CustomSpanContext);
-    final CustomSpanContext ctx = (CustomSpanContext) tracer.scopeManager().active().span().context();
+    final CustomSpanContext ctx =
+        (CustomSpanContext) tracer.scopeManager().active().span().context();
     CustomSpanContext ctxCopy = ctx.withFlags((byte) 1);
     ctxCopy = ctxCopy.withBaggage(Collections.emptyMap());
     ctxCopy = ctxCopy.withBaggageItem("hello", "world");

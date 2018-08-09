@@ -212,11 +212,12 @@ public class Configuration {
     Metrics metrics = new Metrics(metricsFactory);
     Reporter reporter = reporterConfig.getReporter(metrics);
     Sampler sampler = samplerConfig.createSampler(serviceName, metrics);
-    JaegerTracer.Builder builder = createTracerBuilder(serviceName)
-        .withSampler(sampler)
-        .withReporter(reporter)
-        .withMetrics(metrics)
-        .withTags(tracerTags);
+    JaegerTracer.Builder builder =
+        createTracerBuilder(serviceName)
+            .withSampler(sampler)
+            .withReporter(reporter)
+            .withMetrics(metrics)
+            .withTags(tracerTags);
     codecConfig.apply(builder);
     return builder;
   }

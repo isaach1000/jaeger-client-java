@@ -14,9 +14,7 @@
 
 package io.jaegertracing.internal;
 
-import io.jaegertracing.internal.propagation.TextMapCodec;
 import io.opentracing.SpanContext;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +32,14 @@ public class JaegerSpanContext implements SpanContext {
   private final JaegerObjectFactory objectFactory;
 
   public JaegerSpanContext(long traceId, long spanId, long parentId, byte flags) {
-    this(traceId, spanId, parentId, flags, Collections.<String, String>emptyMap(), null, new JaegerObjectFactory());
+    this(
+        traceId,
+        spanId,
+        parentId,
+        flags,
+        Collections.<String, String>emptyMap(),
+        null,
+        new JaegerObjectFactory());
   }
 
   protected JaegerSpanContext(

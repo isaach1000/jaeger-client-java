@@ -15,8 +15,8 @@
 package io.jaegertracing.internal.propagation;
 
 import io.jaegertracing.internal.Constants;
-import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerObjectFactory;
+import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.exceptions.EmptyTracerStateStringException;
 import io.jaegertracing.internal.exceptions.MalformedTracerStateStringException;
 import io.jaegertracing.spi.Codec;
@@ -91,7 +91,8 @@ public class TextMapCodec implements Codec<TextMap> {
     }
     if (context == null) {
       if (debugId != null) {
-        return objectFactory.createSpanContext(0, 0, 0, (byte) 0, Collections.<String, String>emptyMap(), debugId);
+        return objectFactory.createSpanContext(
+            0, 0, 0, (byte) 0, Collections.<String, String>emptyMap(), debugId);
       }
       return null;
     }
@@ -142,7 +143,8 @@ public class TextMapCodec implements Codec<TextMap> {
     }
   }
 
-  public static JaegerSpanContext contextFromString(String value, JaegerObjectFactory objectFactory) {
+  public static JaegerSpanContext contextFromString(
+      String value, JaegerObjectFactory objectFactory) {
     if (value == null || value.equals("")) {
       throw new EmptyTracerStateStringException();
     }
@@ -152,7 +154,8 @@ public class TextMapCodec implements Codec<TextMap> {
       throw new MalformedTracerStateStringException(value);
     }
 
-    // TODO(isaachier): When we drop Java 1.6 support, use Long.parseUnsignedLong instead of using BigInteger.
+    // TODO(isaachier): When we drop Java 1.6 support, use Long.parseUnsignedLong instead of using
+    // BigInteger.
     return objectFactory.createSpanContext(
         new BigInteger(parts[0], 16).longValue(),
         new BigInteger(parts[1], 16).longValue(),
